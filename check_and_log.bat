@@ -87,10 +87,10 @@ REM --- 4. Optional: run the game --------------------------------------------
 if /I not "%~1"=="run" goto SUMMARY
 
 echo [4/%TOTAL%] Running the game [close the game window to finish]...
-echo === Runtime Log [%DATE% %TIME%] === > logs\runtime.log
+echo === Runtime Log [%DATE% %TIME%] === > logs\runtime.ansi
 set "RUST_LOG=oxide_core=debug,bevy=info,wgpu=error"
 set "RUST_BACKTRACE=1"
-cargo run --color never >> logs\runtime.log 2>&1
+cargo run --color never >> logs\runtime.ansi 2>&1
 if errorlevel 1 goto RUN_FAIL
 echo        Result: OK
 set "STATUS_RUN=OK [Exited cleanly]"
