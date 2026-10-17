@@ -6,6 +6,18 @@
 //!   LMB   — стрельба (можно зажать)
 //!   Мышь  — прицеливание
 
+// Педантичные проверки, ложноположительные для Bevy ECS и геймдев-математики.
+// Атрибуты в коде имеют приоритет над флагом `-W clippy::pedantic` из командной строки.
+#![allow(
+    // Системы Bevy обязаны принимать `Res<T>` / `Query<…>` по значению (иначе ломается `IntoSystem`),
+    // а `Handle<T>` — дешёвый clone-able хэндл.
+    clippy::needless_pass_by_value,
+    // Намеренные касты в расчётах времени и хэшах частиц.
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
+
 use bevy::core_pipeline::bloom::Bloom;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::math::Isometry3d;
@@ -91,20 +103,90 @@ struct ObstacleDef {
 }
 
 const OBSTACLES: &[ObstacleDef] = &[
-    ObstacleDef { pos: Vec2::new(6.0, -5.0), size: Vec3::new(2.0, 1.5, 2.0), orange: false, column: false },
-    ObstacleDef { pos: Vec2::new(-8.0, -3.0), size: Vec3::new(3.0, 1.0, 1.5), orange: true, column: false },
-    ObstacleDef { pos: Vec2::new(-4.0, 9.0), size: Vec3::new(1.6, 4.0, 1.6), orange: false, column: true },
-    ObstacleDef { pos: Vec2::new(10.0, 8.0), size: Vec3::new(1.4, 3.0, 1.4), orange: true, column: true },
-    ObstacleDef { pos: Vec2::new(0.0, -14.0), size: Vec3::new(8.0, 1.2, 1.0), orange: false, column: false },
-    ObstacleDef { pos: Vec2::new(-15.0, -12.0), size: Vec3::new(2.5, 2.5, 2.5), orange: true, column: false },
-    ObstacleDef { pos: Vec2::new(16.0, -10.0), size: Vec3::new(1.8, 5.0, 1.8), orange: false, column: true },
-    ObstacleDef { pos: Vec2::new(18.0, 14.0), size: Vec3::new(4.0, 1.0, 4.0), orange: true, column: false },
-    ObstacleDef { pos: Vec2::new(-18.0, 12.0), size: Vec3::new(1.2, 1.8, 6.0), orange: false, column: false },
-    ObstacleDef { pos: Vec2::new(-25.0, 0.0), size: Vec3::new(2.0, 6.0, 2.0), orange: true, column: true },
-    ObstacleDef { pos: Vec2::new(26.0, 0.0), size: Vec3::new(2.0, 6.0, 2.0), orange: false, column: true },
-    ObstacleDef { pos: Vec2::new(0.0, 22.0), size: Vec3::new(10.0, 0.8, 1.2), orange: true, column: false },
-    ObstacleDef { pos: Vec2::new(30.0, -28.0), size: Vec3::new(3.0, 3.0, 3.0), orange: false, column: false },
-    ObstacleDef { pos: Vec2::new(-30.0, 30.0), size: Vec3::new(3.0, 2.0, 3.0), orange: true, column: false },
+    ObstacleDef {
+        pos: Vec2::new(6.0, -5.0),
+        size: Vec3::new(2.0, 1.5, 2.0),
+        orange: false,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-8.0, -3.0),
+        size: Vec3::new(3.0, 1.0, 1.5),
+        orange: true,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-4.0, 9.0),
+        size: Vec3::new(1.6, 4.0, 1.6),
+        orange: false,
+        column: true,
+    },
+    ObstacleDef {
+        pos: Vec2::new(10.0, 8.0),
+        size: Vec3::new(1.4, 3.0, 1.4),
+        orange: true,
+        column: true,
+    },
+    ObstacleDef {
+        pos: Vec2::new(0.0, -14.0),
+        size: Vec3::new(8.0, 1.2, 1.0),
+        orange: false,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-15.0, -12.0),
+        size: Vec3::new(2.5, 2.5, 2.5),
+        orange: true,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(16.0, -10.0),
+        size: Vec3::new(1.8, 5.0, 1.8),
+        orange: false,
+        column: true,
+    },
+    ObstacleDef {
+        pos: Vec2::new(18.0, 14.0),
+        size: Vec3::new(4.0, 1.0, 4.0),
+        orange: true,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-18.0, 12.0),
+        size: Vec3::new(1.2, 1.8, 6.0),
+        orange: false,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-25.0, 0.0),
+        size: Vec3::new(2.0, 6.0, 2.0),
+        orange: true,
+        column: true,
+    },
+    ObstacleDef {
+        pos: Vec2::new(26.0, 0.0),
+        size: Vec3::new(2.0, 6.0, 2.0),
+        orange: false,
+        column: true,
+    },
+    ObstacleDef {
+        pos: Vec2::new(0.0, 22.0),
+        size: Vec3::new(10.0, 0.8, 1.2),
+        orange: true,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(30.0, -28.0),
+        size: Vec3::new(3.0, 3.0, 3.0),
+        orange: false,
+        column: false,
+    },
+    ObstacleDef {
+        pos: Vec2::new(-30.0, 30.0),
+        size: Vec3::new(3.0, 2.0, 3.0),
+        orange: true,
+        column: false,
+    },
 ];
 
 // ============================================================================
@@ -191,7 +273,10 @@ fn main() {
             brightness: 250.0,
         })
         .init_resource::<AimPoint>()
-        .add_systems(Startup, (setup_assets, setup_arena, setup_player_and_camera, setup_ui).chain())
+        .add_systems(
+            Startup,
+            (setup_assets, setup_arena, setup_player_and_camera, setup_ui).chain(),
+        )
         .add_systems(
             Update,
             (
@@ -299,33 +384,57 @@ fn setup_arena(
     for def in OBSTACLES {
         let mesh = if def.column {
             // resolution(6) — шестигранник, классический low-poly.
-            meshes.add(Cylinder::new(def.size.x / 2.0, def.size.y).mesh().resolution(6))
+            meshes.add(
+                Cylinder::new(def.size.x / 2.0, def.size.y)
+                    .mesh()
+                    .resolution(6),
+            )
         } else {
             meshes.add(Cuboid::from_size(def.size))
         };
         commands.spawn((
             Mesh3d(mesh),
-            MeshMaterial3d(if def.orange { mat_orange.clone() } else { mat_red.clone() }),
+            MeshMaterial3d(if def.orange {
+                mat_orange.clone()
+            } else {
+                mat_red.clone()
+            }),
             Transform::from_xyz(def.pos.x, def.size.y / 2.0, def.pos.y),
             // Колонну для коллизий аппроксимируем квадратом — для прототипа достаточно.
-            Obstacle { half_extents: def.size / 2.0 },
+            Obstacle {
+                half_extents: def.size / 2.0,
+            },
         ));
     }
 
     // --- Стены по периметру (тоже препятствия: блокируют игрока и снаряды) ---
     let long = ARENA_SIZE + WALL_THICKNESS * 2.0;
     let walls = [
-        (Vec3::new(0.0, 0.0, -ARENA_HALF - WALL_THICKNESS / 2.0), Vec3::new(long, WALL_HEIGHT, WALL_THICKNESS)),
-        (Vec3::new(0.0, 0.0, ARENA_HALF + WALL_THICKNESS / 2.0), Vec3::new(long, WALL_HEIGHT, WALL_THICKNESS)),
-        (Vec3::new(-ARENA_HALF - WALL_THICKNESS / 2.0, 0.0, 0.0), Vec3::new(WALL_THICKNESS, WALL_HEIGHT, long)),
-        (Vec3::new(ARENA_HALF + WALL_THICKNESS / 2.0, 0.0, 0.0), Vec3::new(WALL_THICKNESS, WALL_HEIGHT, long)),
+        (
+            Vec3::new(0.0, 0.0, -ARENA_HALF - WALL_THICKNESS / 2.0),
+            Vec3::new(long, WALL_HEIGHT, WALL_THICKNESS),
+        ),
+        (
+            Vec3::new(0.0, 0.0, ARENA_HALF + WALL_THICKNESS / 2.0),
+            Vec3::new(long, WALL_HEIGHT, WALL_THICKNESS),
+        ),
+        (
+            Vec3::new(-ARENA_HALF - WALL_THICKNESS / 2.0, 0.0, 0.0),
+            Vec3::new(WALL_THICKNESS, WALL_HEIGHT, long),
+        ),
+        (
+            Vec3::new(ARENA_HALF + WALL_THICKNESS / 2.0, 0.0, 0.0),
+            Vec3::new(WALL_THICKNESS, WALL_HEIGHT, long),
+        ),
     ];
     for (pos, size) in walls {
         commands.spawn((
             Mesh3d(meshes.add(Cuboid::from_size(size))),
             MeshMaterial3d(mat_wall.clone()),
             Transform::from_translation(pos + Vec3::Y * size.y / 2.0),
-            Obstacle { half_extents: size / 2.0 },
+            Obstacle {
+                half_extents: size / 2.0,
+            },
         ));
     }
 
@@ -424,7 +533,12 @@ fn player_movement(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     assets: Res<GameAssets>,
-    mut query: Query<(&mut Player, &mut Velocity, &Transform, &mut MeshMaterial3d<StandardMaterial>)>,
+    mut query: Query<(
+        &mut Player,
+        &mut Velocity,
+        &Transform,
+        &mut MeshMaterial3d<StandardMaterial>,
+    )>,
 ) {
     let Ok((mut player, mut velocity, transform, mut material)) = query.get_single_mut() else {
         return;
@@ -450,13 +564,16 @@ fn player_movement(
     player.dash_cooldown_left = (player.dash_cooldown_left - dt).max(0.0);
 
     // --- Старт рывка ---
-    if keys.just_pressed(KeyCode::Space) && player.dash_cooldown_left <= 0.0 && player.dash_time_left <= 0.0 {
+    if keys.just_pressed(KeyCode::Space)
+        && player.dash_cooldown_left <= 0.0
+        && player.dash_time_left <= 0.0
+    {
         // Рывок в сторону движения; если стоим — туда, куда смотрим.
-        let dir = if wish != Vec3::ZERO {
-            wish
-        } else {
+        let dir = if wish == Vec3::ZERO {
             let f = transform.forward().as_vec3();
             Vec3::new(f.x, 0.0, f.z).normalize_or_zero()
+        } else {
+            wish
         };
         player.dash_dir = dir;
         player.dash_time_left = DASH_DURATION;
@@ -465,7 +582,15 @@ fn player_movement(
 
         // Вспышка искр в момент рывка.
         let seed = (time.elapsed_secs() * 1000.0) as u32;
-        spawn_sparks(&mut commands, &assets, assets.dash_spark_mat.clone(), transform.translation, 14, 7.0, seed);
+        spawn_sparks(
+            &mut commands,
+            &assets,
+            assets.dash_spark_mat.clone(),
+            transform.translation,
+            14,
+            7.0,
+            seed,
+        );
     }
 
     if player.dash_time_left > 0.0 {
@@ -496,7 +621,11 @@ fn player_movement(
     } else {
         // --- Обычное движение: быстрый разгон и ещё более быстрое торможение ---
         let target = wish * MOVE_SPEED;
-        let rate = if wish != Vec3::ZERO { ACCELERATION } else { FRICTION };
+        let rate = if wish == Vec3::ZERO {
+            FRICTION
+        } else {
+            ACCELERATION
+        };
         velocity.0 = move_towards(velocity.0, target, rate * dt);
     }
 }
@@ -523,7 +652,10 @@ fn resolve_player_collisions(
         let p = transform.translation;
 
         // Ближайшая к центру игрока точка прямоугольника.
-        let closest = Vec2::new(p.x.clamp(c.x - h.x, c.x + h.x), p.z.clamp(c.z - h.z, c.z + h.z));
+        let closest = Vec2::new(
+            p.x.clamp(c.x - h.x, c.x + h.x),
+            p.z.clamp(c.z - h.z, c.z + h.z),
+        );
         let delta = Vec2::new(p.x, p.z) - closest;
         let dist_sq = delta.length_squared();
         if dist_sq >= PLAYER_RADIUS * PLAYER_RADIUS {
@@ -678,7 +810,15 @@ fn player_shoot(
 
     // Маленькая дульная вспышка.
     let seed = (time.elapsed_secs() * 7919.0) as u32;
-    spawn_sparks(&mut commands, &assets, assets.spark_mat.clone(), muzzle, 3, 3.0, seed);
+    spawn_sparks(
+        &mut commands,
+        &assets,
+        assets.spark_mat.clone(),
+        muzzle,
+        3,
+        3.0,
+        seed,
+    );
 }
 
 fn update_projectiles(
@@ -708,8 +848,16 @@ fn update_projectiles(
         });
         if hit {
             commands.entity(entity).despawn();
-            let seed = entity.index().wrapping_mul(2654435761);
-            spawn_sparks(&mut commands, &assets, assets.spark_mat.clone(), p, 8, 6.0, seed);
+            let seed = entity.index().wrapping_mul(2_654_435_761);
+            spawn_sparks(
+                &mut commands,
+                &assets,
+                assets.spark_mat.clone(),
+                p,
+                8,
+                6.0,
+                seed,
+            );
         }
     }
 }
@@ -735,10 +883,10 @@ fn spawn_sparks(
     origin: Vec3,
     count: u32,
     speed: f32,
-    seed: u32,
+    rng_seed: u32,
 ) {
     for i in 0..count {
-        let s = seed.wrapping_add(i.wrapping_mul(97));
+        let s = rng_seed.wrapping_add(i.wrapping_mul(97));
         // Равномерно по кругу + немного случайности по углу, высоте и скорости.
         let angle = (i as f32 / count as f32) * TAU + hash01(s) * 0.8;
         let up = 0.5 + hash01(s ^ 0xA5A5) * 1.5;
@@ -821,5 +969,9 @@ fn draw_aim_gizmos(mut gizmos: Gizmos, aim: Res<AimPoint>, player_q: Query<(&Tra
 
     // Проекция прицела на землю — помогает читать глубину сцены.
     let ground = Vec3::new(point.x, 0.03, point.z);
-    gizmos.circle(Isometry3d::new(ground, flat), 0.2, Color::srgba(1.0, 0.3, 0.2, 0.5));
+    gizmos.circle(
+        Isometry3d::new(ground, flat),
+        0.2,
+        Color::srgba(1.0, 0.3, 0.2, 0.5),
+    );
 }
