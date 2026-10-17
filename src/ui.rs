@@ -21,7 +21,7 @@ struct HudText;
 
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
-        Text::new("oxide-core\nWASD: move | SPACE: dash | LMB: shoot"),
+        Text::new("oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nEliminated: {} | Hostiles: {}"),
         TextFont {
             font_size: 16.0,
             ..default()
@@ -47,7 +47,7 @@ fn update_hud(
     };
     let hostiles = enemies_q.iter().count();
     **text = format!(
-        "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nEliminated: {} | Hostiles: {}",
+        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nEliminated: {} | Hostiles: {}",
         stats.kills, hostiles
     );
 }
