@@ -3,6 +3,7 @@
 //! Экспортирует:
 //! - `UiPlugin`: Bevy-плагин UI и перезапуска.
 
+use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
@@ -40,7 +41,7 @@ struct GameOverOverlay;
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
         Text::new(
-            "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: 100/100 | Eliminated: 0 | Hostiles: 6",
+            "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: 100/100 | Eliminated: 0 | Hostiles: 6 | FPS: --",
         ),
         TextFont {
             font_size: 16.0,
@@ -60,6 +61,7 @@ fn setup_ui(mut commands: Commands) {
 fn update_hud(
     app_state: Res<State<AppState>>,
     stats: Res<WaveStats>,
+    diagnostics: Res<DiagnosticsStore>,
     player_q: Query<&Health, With<Player>>,
     enemies_q: Query<&Enemy>,
     mut text_q: Query<&mut Text, With<HudText>>,
@@ -75,11 +77,15 @@ fn update_hud(
         player_q.get_single().map_or(0.0, |h| h.current.max(0.0))
     };
     let hostiles = enemies_q.iter().count();
+    let fps = diagnostics
+        .get(&FrameTimeDiagnosticsPlugin::FPS)
+        .and_then(bevy::diagnostic::Diagnostic::smoothed)
+        .unwrap_or(0.0);
 
-    // Используем стандартные ASCII-дефисы '-' вместо '—', чтобы не отображались квадраты (▯)
+    // Используем только ASCII символы, чтобы не отображались квадраты (▯)
     **text = format!(
-        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {}",
-        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles
+        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {} | FPS: {:.0}",
+        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles, fps
     );
 }
 
@@ -132,9 +138,9 @@ fn spawn_game_over_screen(mut commands: Commands, stats: Res<WaveStats>) {
                 TextColor(Color::srgb(0.9, 0.85, 0.85)),
             ));
 
-            // Поддержка обеих раскладок (EN: R, RU: К)
+            // Только ASCII-символы во встроенном шрифте Bevy (без кириллицы, чтобы не было квадрата ▯)
             parent.spawn((
-                Text::new("Press [ R / К ] or [ Space / LMB ] to Reboot Core"),
+                Text::new("Press [ R ] or [ Space / LMB ] to Reboot Core"),
                 TextFont {
                     font_size: 26.0,
                     ..default()

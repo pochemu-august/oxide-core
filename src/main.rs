@@ -31,7 +31,10 @@ pub mod player;
 pub mod ui;
 pub mod vfx;
 
+use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
+use bevy::window::PresentMode;
+use std::time::{Duration, Instant};
 
 /// Состояния игры: активный геймплей либо экран окончания игры (Game Over).
 #[derive(States, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -59,16 +62,39 @@ pub enum GameSet {
     Vfx,
 }
 
+/// Ограничитель максимальной частоты кадров (144 FPS) в расписании `Last`.
+/// Предотвращает раскрутку вентиляторов GPU и перегрев при отключенном `VSync` в драйверах.
+fn frame_pacer(mut last_frame: Local<Option<Instant>>) {
+    const TARGET_FPS: f64 = 144.0;
+    let target_duration = Duration::from_secs_f64(1.0 / TARGET_FPS);
+    if let Some(prev) = *last_frame {
+        let elapsed = prev.elapsed();
+        if let Some(remaining) = target_duration.checked_sub(elapsed) {
+            std::thread::sleep(remaining);
+        }
+    }
+    *last_frame = Some(Instant::now());
+}
+
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "oxide-core".into(),
-                resolution: (1280.0_f32, 720.0_f32).into(),
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "oxide-core".into(),
+                        resolution: (1280.0_f32, 720.0_f32).into(),
+                        present_mode: PresentMode::AutoVsync,
+                        ..default()
+                    }),
+                    ..default()
+                })
+                .set(bevy::log::LogPlugin {
+                    filter: "wgpu=error,naga=warn,bevy_render=warn".into(),
+                    ..default()
+                }),
+        )
+        .add_plugins(FrameTimeDiagnosticsPlugin)
         .init_state::<AppState>()
         // Задаём строгий порядок фаз каждого кадра во время активного боя
         .configure_sets(
@@ -84,6 +110,8 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        // Ограничитель частоты кадров
+        .add_systems(Last, frame_pacer)
         // Подключаем модули игры
         .add_plugins((
             arena::ArenaPlugin,
