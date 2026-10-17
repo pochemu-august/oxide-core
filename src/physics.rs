@@ -31,6 +31,7 @@ pub struct Velocity(pub Vec3);
 
 /// Линейно приближает вектор `current` к `target` не более чем на `max_delta`.
 /// Даёт максимальную отзывчивость без вялого хвоста классического экспоненциального lerp.
+#[must_use]
 pub fn move_towards(current: Vec3, target: Vec3, max_delta: f32) -> Vec3 {
     let diff = target - current;
     let dist = diff.length();

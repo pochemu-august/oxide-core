@@ -33,7 +33,7 @@ impl Plugin for AimPlugin {
 #[derive(Resource, Default)]
 pub struct AimPoint(pub Option<Vec3>);
 
-/// Рассчитывает 3D-точку пересечения луча курсора мыши с плоскостью y = AIM_PLANE_Y.
+/// Рассчитывает 3D-точку пересечения луча курсора мыши с плоскостью y = `AIM_PLANE_Y`.
 fn update_aim(
     windows: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &Transform), With<MainCamera>>,

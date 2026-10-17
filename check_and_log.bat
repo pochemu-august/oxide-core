@@ -121,5 +121,8 @@ if "%FAILED%"=="1" (
 echo ==========================================================
 echo.
 
+if not "%CI%"=="" goto FINISH
+if "%OXIDE_NO_PAUSE%"=="1" goto FINISH
 pause
+:FINISH
 endlocal & exit /b %FAILED%
