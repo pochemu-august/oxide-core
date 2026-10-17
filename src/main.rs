@@ -34,7 +34,6 @@ pub mod vfx;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 use bevy::window::PresentMode;
-use std::time::{Duration, Instant};
 
 /// Состояния игры: активный геймплей либо экран окончания игры (Game Over).
 #[derive(States, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -60,20 +59,6 @@ pub enum GameSet {
     Combat,
     /// 6. Процедурные эффекты (частицы, Gizmo-линии лазера и прицела)
     Vfx,
-}
-
-/// Ограничитель максимальной частоты кадров (144 FPS) в расписании `Last`.
-/// Предотвращает раскрутку вентиляторов GPU и перегрев при отключенном `VSync` в драйверах.
-fn frame_pacer(mut last_frame: Local<Option<Instant>>) {
-    const TARGET_FPS: f64 = 144.0;
-    let target_duration = Duration::from_secs_f64(1.0 / TARGET_FPS);
-    if let Some(prev) = *last_frame {
-        let elapsed = prev.elapsed();
-        if let Some(remaining) = target_duration.checked_sub(elapsed) {
-            std::thread::sleep(remaining);
-        }
-    }
-    *last_frame = Some(Instant::now());
 }
 
 fn main() {
@@ -110,8 +95,6 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
-        // Ограничитель частоты кадров
-        .add_systems(Last, frame_pacer)
         // Подключаем модули игры
         .add_plugins((
             arena::ArenaPlugin,

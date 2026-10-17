@@ -12,7 +12,7 @@ use bevy::prelude::*;
 pub const ARENA_SIZE: f32 = 100.0;
 pub const ARENA_HALF: f32 = ARENA_SIZE / 2.0;
 pub const WALL_THICKNESS: f32 = 1.0;
-pub const WALL_HEIGHT: f32 = 1.2;
+pub const WALL_HEIGHT: f32 = 2.5;
 
 // ============================================================================
 // ИГРОК

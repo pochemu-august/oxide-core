@@ -81,9 +81,17 @@ fn rotate_player_to_aim(aim: Res<AimPoint>, mut player_q: Query<&mut Transform, 
 /// Визуализация лазерного луча прицеливания и перекрестия на земле с помощью Bevy Gizmos.
 fn draw_aim_gizmos(
     mut gizmos: Gizmos,
+    windows: Query<&Window, With<PrimaryWindow>>,
     aim: Res<AimPoint>,
     player_q: Query<&Transform, With<Player>>,
 ) {
+    let Ok(window) = windows.get_single() else {
+        return;
+    };
+    if window.cursor_position().is_none() {
+        return;
+    }
+
     let Ok(transform) = player_q.get_single() else {
         return;
     };

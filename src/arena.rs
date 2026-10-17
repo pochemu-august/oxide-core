@@ -47,13 +47,13 @@ pub struct ObstacleDef {
 pub const OBSTACLES: &[ObstacleDef] = &[
     ObstacleDef {
         pos: Vec2::new(6.0, -5.0),
-        size: Vec3::new(2.0, 1.5, 2.0),
+        size: Vec3::new(2.0, 2.5, 2.0),
         orange: false,
         column: false,
     },
     ObstacleDef {
         pos: Vec2::new(-8.0, -3.0),
-        size: Vec3::new(3.0, 1.0, 1.5),
+        size: Vec3::new(3.0, 2.5, 1.5),
         orange: true,
         column: false,
     },
@@ -65,13 +65,13 @@ pub const OBSTACLES: &[ObstacleDef] = &[
     },
     ObstacleDef {
         pos: Vec2::new(10.0, 8.0),
-        size: Vec3::new(1.4, 3.0, 1.4),
+        size: Vec3::new(1.4, 3.5, 1.4),
         orange: true,
         column: true,
     },
     ObstacleDef {
         pos: Vec2::new(0.0, -14.0),
-        size: Vec3::new(8.0, 1.2, 1.0),
+        size: Vec3::new(8.0, 2.5, 1.0),
         orange: false,
         column: false,
     },
@@ -89,13 +89,13 @@ pub const OBSTACLES: &[ObstacleDef] = &[
     },
     ObstacleDef {
         pos: Vec2::new(18.0, 14.0),
-        size: Vec3::new(4.0, 1.0, 4.0),
+        size: Vec3::new(4.0, 2.5, 4.0),
         orange: true,
         column: false,
     },
     ObstacleDef {
         pos: Vec2::new(-18.0, 12.0),
-        size: Vec3::new(1.2, 1.8, 6.0),
+        size: Vec3::new(1.2, 2.5, 6.0),
         orange: false,
         column: false,
     },
@@ -113,7 +113,7 @@ pub const OBSTACLES: &[ObstacleDef] = &[
     },
     ObstacleDef {
         pos: Vec2::new(0.0, 22.0),
-        size: Vec3::new(10.0, 0.8, 1.2),
+        size: Vec3::new(10.0, 2.5, 1.2),
         orange: true,
         column: false,
     },
@@ -125,7 +125,7 @@ pub const OBSTACLES: &[ObstacleDef] = &[
     },
     ObstacleDef {
         pos: Vec2::new(-30.0, 30.0),
-        size: Vec3::new(3.0, 2.0, 3.0),
+        size: Vec3::new(3.0, 2.5, 3.0),
         orange: true,
         column: false,
     },

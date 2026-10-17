@@ -58,17 +58,43 @@ fn setup_ui(mut commands: Commands) {
     ));
 }
 
+#[allow(clippy::too_many_arguments)]
 fn update_hud(
+    time: Res<Time>,
     app_state: Res<State<AppState>>,
     stats: Res<WaveStats>,
     diagnostics: Res<DiagnosticsStore>,
     player_q: Query<&Health, With<Player>>,
     enemies_q: Query<&Enemy>,
     mut text_q: Query<&mut Text, With<HudText>>,
+    mut smoothed_fps: Local<f64>,
+    mut display_timer: Local<f32>,
+    mut display_fps: Local<f64>,
 ) {
     let Ok(mut text) = text_q.get_single_mut() else {
         return;
     };
+
+    // Экспоненциальное скользящее среднее (EMA) для устранения мелких колебаний
+    if let Some(raw_fps) = diagnostics
+        .get(&FrameTimeDiagnosticsPlugin::FPS)
+        .and_then(bevy::diagnostic::Diagnostic::smoothed)
+    {
+        if *smoothed_fps <= 0.0 {
+            *smoothed_fps = raw_fps;
+        } else {
+            // Коэффициент сглаживания 0.08 (~30 кадров для адаптации)
+            *smoothed_fps = *smoothed_fps * 0.92 + raw_fps * 0.08;
+        }
+    }
+
+    // Обновляем видимый счётчик FPS в UI 4 раза в секунду (каждые 0.25 с),
+    // чтобы цифры не мельтешили перед глазами игрока
+    *display_timer += time.delta_secs();
+    if *display_timer >= 0.25 || *display_fps <= 0.0 {
+        *display_timer = 0.0;
+        *display_fps = *smoothed_fps;
+    }
 
     // При Game Over гарантированно отображаем 0 HP
     let hp = if *app_state.get() == AppState::GameOver {
@@ -77,15 +103,11 @@ fn update_hud(
         player_q.get_single().map_or(0.0, |h| h.current.max(0.0))
     };
     let hostiles = enemies_q.iter().count();
-    let fps = diagnostics
-        .get(&FrameTimeDiagnosticsPlugin::FPS)
-        .and_then(bevy::diagnostic::Diagnostic::smoothed)
-        .unwrap_or(0.0);
 
     // Используем только ASCII символы, чтобы не отображались квадраты (▯)
     **text = format!(
         "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {} | FPS: {:.0}",
-        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles, fps
+        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles, *display_fps
     );
 }
 
