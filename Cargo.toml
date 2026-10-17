@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+bevy = "0.15"
+
+# Bevy в debug-сборке очень медленный: оптимизируем зависимости,
+# а свой код собираем с лёгкой оптимизацией — компиляция остаётся быстрой.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
