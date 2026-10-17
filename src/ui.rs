@@ -1,8 +1,10 @@
-//! 🖥️ ui.rs — Наэкранный интерфейс (HUD), экран Game Over и логика перезапуска на клавишу R.
+//! 🖥️ ui.rs — Наэкранный интерфейс (HUD), экран Game Over и логика перезапуска на клавишу R (включая русскую раскладку К).
 //!
 //! Экспортирует:
 //! - `UiPlugin`: Bevy-плагин UI и перезапуска.
 
+use bevy::input::ButtonState;
+use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::prelude::*;
 
 use crate::AppState;
@@ -19,7 +21,7 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_ui)
-            .add_systems(Update, update_hud.run_if(in_state(AppState::InGame)))
+            .add_systems(Update, update_hud)
             .add_systems(OnEnter(AppState::GameOver), spawn_game_over_screen)
             .add_systems(OnExit(AppState::GameOver), despawn_game_over_screen)
             .add_systems(
@@ -38,7 +40,7 @@ struct GameOverOverlay;
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
         Text::new(
-            "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nHP: 100/100 | Eliminated: 0 | Hostiles: 6",
+            "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: 100/100 | Eliminated: 0 | Hostiles: 6",
         ),
         TextFont {
             font_size: 16.0,
@@ -56,6 +58,7 @@ fn setup_ui(mut commands: Commands) {
 }
 
 fn update_hud(
+    app_state: Res<State<AppState>>,
     stats: Res<WaveStats>,
     player_q: Query<&Health, With<Player>>,
     enemies_q: Query<&Enemy>,
@@ -64,11 +67,18 @@ fn update_hud(
     let Ok(mut text) = text_q.get_single_mut() else {
         return;
     };
-    let hp = player_q.get_single().map_or(0.0, |h| h.current.max(0.0));
+
+    // При Game Over гарантированно отображаем 0 HP
+    let hp = if *app_state.get() == AppState::GameOver {
+        0.0
+    } else {
+        player_q.get_single().map_or(0.0, |h| h.current.max(0.0))
+    };
     let hostiles = enemies_q.iter().count();
 
+    // Используем стандартные ASCII-дефисы '-' вместо '—', чтобы не отображались квадраты (▯)
     **text = format!(
-        "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {}",
+        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {}",
         hp, PLAYER_MAX_HEALTH, stats.kills, hostiles
     );
 }
@@ -100,8 +110,9 @@ fn spawn_game_over_screen(mut commands: Commands, stats: Res<WaveStats>) {
                 TextColor(Color::srgb(1.0, 0.15, 0.15)),
             ));
 
+            // Замена длинного тире на стандартный ASCII дефис '-'
             parent.spawn((
-                Text::new("SYSTEM CRITICAL — CORE TERMINATED"),
+                Text::new("SYSTEM CRITICAL - CORE TERMINATED"),
                 TextFont {
                     font_size: 18.0,
                     ..default()
@@ -121,8 +132,9 @@ fn spawn_game_over_screen(mut commands: Commands, stats: Res<WaveStats>) {
                 TextColor(Color::srgb(0.9, 0.85, 0.85)),
             ));
 
+            // Поддержка обеих раскладок (EN: R, RU: К)
             parent.spawn((
-                Text::new("Press [ R ] to Reboot Core"),
+                Text::new("Press [ R / К ] or [ Space / LMB ] to Reboot Core"),
                 TextFont {
                     font_size: 26.0,
                     ..default()
@@ -138,10 +150,12 @@ fn despawn_game_over_screen(mut commands: Commands, query: Query<Entity, With<Ga
     }
 }
 
-/// Перезапуск игры по нажатию клавиши R на экране Game Over.
+/// Перезапуск игры по нажатию клавиши R / К (поддерживает русскую и английскую раскладки, а также Space/LMB).
 #[allow(clippy::too_many_arguments)]
 fn handle_game_restart(
     keys: Res<ButtonInput<KeyCode>>,
+    mut key_events: EventReader<KeyboardInput>,
+    mouse: Res<ButtonInput<MouseButton>>,
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
     mut stats: ResMut<WaveStats>,
@@ -159,7 +173,31 @@ fn handle_game_restart(
     projectiles_q: Query<Entity, With<Projectile>>,
     particles_q: Query<Entity, With<Particle>>,
 ) {
-    if !keys.just_pressed(KeyCode::KeyR) {
+    // Проверка физической клавиши R, пробела, Enter или клика ЛКМ
+    let mut restart_requested = keys.just_pressed(KeyCode::KeyR)
+        || keys.just_pressed(KeyCode::Space)
+        || keys.just_pressed(KeyCode::Enter)
+        || mouse.just_pressed(MouseButton::Left);
+
+    // Поддержка русской раскладки ввода (клавиша 'К' на месте 'R')
+    for ev in key_events.read() {
+        if ev.state != ButtonState::Pressed {
+            continue;
+        }
+        if ev.key_code == KeyCode::KeyR {
+            restart_requested = true;
+            break;
+        }
+        if let Key::Character(ref s) = ev.logical_key {
+            let s_str = s.as_str();
+            if s_str.eq_ignore_ascii_case("r") || s_str == "к" || s_str == "К" {
+                restart_requested = true;
+                break;
+            }
+        }
+    }
+
+    if !restart_requested {
         return;
     }
 
