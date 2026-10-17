@@ -8,8 +8,6 @@ REM    check_and_log.bat run    - same, then launch the game and capture runtime
 REM ==========================================================================
 setlocal EnableExtensions
 
-REM Always operate from the project root (folder of this script),
-REM so the script works no matter where it is launched from.
 cd /d "%~dp0"
 
 if not exist logs mkdir logs
@@ -24,35 +22,45 @@ echo.
 
 REM --- 1. Formatting ---------------------------------------------------------
 echo | set /p "=[1/%TOTAL%] Running cargo fmt check... "
-cargo fmt -- --check > logs\fmt_check.log 2>&1
+echo === Cargo Fmt Check (%DATE% %TIME%) === > logs\fmt_check.log
+cargo fmt --verbose -- --check >> logs\fmt_check.log 2>&1
 if errorlevel 1 (
+    echo Status: FAILED (Run 'cargo fmt' to fix) >> logs\fmt_check.log
     echo FAILED  ^(see logs\fmt_check.log, fix with: cargo fmt^)
     set "FAILED=1"
 ) else (
+    echo Status: OK (All files formatted properly) >> logs\fmt_check.log
     echo Done.
 )
 
 REM --- 2. Compilation --------------------------------------------------------
 echo | set /p "=[2/%TOTAL%] Running cargo check... "
-cargo check --color never > logs\cargo_check.log 2>&1
+echo === Cargo Check (%DATE% %TIME%) === > logs\cargo_check.log
+cargo check --verbose --color never >> logs\cargo_check.log 2>&1
 if errorlevel 1 (
+    echo Status: FAILED >> logs\cargo_check.log
     echo FAILED  ^(see logs\cargo_check.log^)
     set "FAILED=1"
 ) else (
+    echo Status: OK (No compilation errors) >> logs\cargo_check.log
     echo Done.
 )
 
 REM --- 3. Clippy (pedantic) --------------------------------------------------
 echo | set /p "=[3/%TOTAL%] Running cargo clippy (pedantic)... "
-cargo clippy --color never -- -W clippy::pedantic > logs\clippy_analysis.log 2>&1
+echo === Cargo Clippy Pedantic (%DATE% %TIME%) === > logs\clippy_analysis.log
+cargo clippy --verbose --color never -- -W clippy::pedantic >> logs\clippy_analysis.log 2>&1
 if errorlevel 1 (
+    echo Status: FAILED >> logs\clippy_analysis.log
     echo FAILED  ^(see logs\clippy_analysis.log^)
     set "FAILED=1"
 ) else (
-    findstr /R /C:"^warning" logs\clippy_analysis.log > nul
+    findstr /R /C:"^warning:" logs\clippy_analysis.log > nul
     if errorlevel 1 (
+        echo Status: OK (0 warnings) >> logs\clippy_analysis.log
         echo Done. No warnings.
     ) else (
+        echo Status: WARNINGS FOUND >> logs\clippy_analysis.log
         echo Done, but warnings found ^(see logs\clippy_analysis.log^)
     )
 )
@@ -60,9 +68,10 @@ if errorlevel 1 (
 REM --- 4. Optional: run the game --------------------------------------------
 if /I "%~1"=="run" (
     echo [4/%TOTAL%] Running the game ^(close the window to finish^)...
-    set "RUST_LOG=oxide_core=debug,bevy=warn,wgpu=error"
+    echo === Runtime Log (%DATE% %TIME%) === > logs\runtime.log
+    set "RUST_LOG=oxide_core=debug,bevy=info,wgpu=error"
     set "RUST_BACKTRACE=1"
-    cargo run --color never > logs\runtime.log 2>&1
+    cargo run --color never >> logs\runtime.log 2>&1
     if errorlevel 1 (
         echo        Game exited with an error ^(see logs\runtime.log^)
         set "FAILED=1"
