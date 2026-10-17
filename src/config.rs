@@ -106,3 +106,12 @@ pub const COLOR_ENEMY: Color = Color::srgb(0.92, 0.12, 0.14);
 pub const COLOR_ENEMY_EYE: Color = Color::srgb(1.0, 0.85, 0.1);
 pub const MAX_ENEMIES: usize = 12;
 pub const ENEMY_SPAWN_INTERVAL: f32 = 2.5;
+
+// ============================================================================
+// ЗДОРОВЬЕ И УРОН
+// ============================================================================
+
+pub const PLAYER_MAX_HEALTH: f32 = 100.0;
+pub const ENEMY_ATTACK_DAMAGE: f32 = 25.0;
+pub const PLAYER_INVULN_AFTER_HIT: f32 = 0.5;
+pub const COLOR_PLAYER_HURT: Color = Color::srgb(1.0, 0.2, 0.2);

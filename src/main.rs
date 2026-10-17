@@ -33,6 +33,14 @@ pub mod vfx;
 
 use bevy::prelude::*;
 
+/// Состояния игры: активный геймплей либо экран окончания игры (Game Over).
+#[derive(States, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AppState {
+    #[default]
+    InGame,
+    GameOver,
+}
+
 /// Единый порядок выполнения систем в каждом игровом кадре (`Update`).
 /// Любая новая система подключается в подходящий набор: `.in_set(GameSet::Combat)`.
 #[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -61,7 +69,8 @@ fn main() {
             }),
             ..default()
         }))
-        // Задаём строгий порядок фаз каждого кадра
+        .init_state::<AppState>()
+        // Задаём строгий порядок фаз каждого кадра во время активного боя
         .configure_sets(
             Update,
             (
@@ -72,7 +81,8 @@ fn main() {
                 GameSet::Combat,
                 GameSet::Vfx,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(AppState::InGame)),
         )
         // Подключаем модули игры
         .add_plugins((

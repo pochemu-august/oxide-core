@@ -1,28 +1,44 @@
-//! 🖥️ ui.rs — Наэкранный интерфейс (HUD), подсказки управления и счётчик врагов.
+//! 🖥️ ui.rs — Наэкранный интерфейс (HUD), экран Game Over и логика перезапуска на клавишу R.
 //!
 //! Экспортирует:
-//! - `UiPlugin`: Bevy-плагин спавна и обновления UI элементов.
+//! - `UiPlugin`: Bevy-плагин UI и перезапуска.
 
 use bevy::prelude::*;
 
-use crate::enemy::{Enemy, WaveStats};
+use crate::AppState;
+use crate::camera::MainCamera;
+use crate::combat::Projectile;
+use crate::config::{CAMERA_OFFSET, PLAYER_MAX_HEALTH, PLAYER_START};
+use crate::enemy::{Enemy, EnemyAssets, Health, WaveStats, spawn_squad};
+use crate::physics::Velocity;
+use crate::player::{Player, PlayerAssets};
+use crate::vfx::Particle;
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup_ui)
-            .add_systems(Update, update_hud);
+            .add_systems(Update, update_hud.run_if(in_state(AppState::InGame)))
+            .add_systems(OnEnter(AppState::GameOver), spawn_game_over_screen)
+            .add_systems(OnExit(AppState::GameOver), despawn_game_over_screen)
+            .add_systems(
+                Update,
+                handle_game_restart.run_if(in_state(AppState::GameOver)),
+            );
     }
 }
 
 #[derive(Component)]
 struct HudText;
 
+#[derive(Component)]
+struct GameOverOverlay;
+
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
         Text::new(
-            "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nEliminated: 0 | Hostiles: 6",
+            "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nHP: 100/100 | Eliminated: 0 | Hostiles: 6",
         ),
         TextFont {
             font_size: 16.0,
@@ -41,15 +57,148 @@ fn setup_ui(mut commands: Commands) {
 
 fn update_hud(
     stats: Res<WaveStats>,
+    player_q: Query<&Health, With<Player>>,
     enemies_q: Query<&Enemy>,
     mut text_q: Query<&mut Text, With<HudText>>,
 ) {
     let Ok(mut text) = text_q.get_single_mut() else {
         return;
     };
+    let hp = player_q.get_single().map_or(0.0, |h| h.current.max(0.0));
     let hostiles = enemies_q.iter().count();
+
     **text = format!(
-        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nEliminated: {} | Hostiles: {}",
-        stats.kills, hostiles
+        "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {}",
+        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles
     );
+}
+
+/// Спавнит полноэкранный ретро-оверлей при гибели игрока (Game Over).
+fn spawn_game_over_screen(mut commands: Commands, stats: Res<WaveStats>) {
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(14.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.08, 0.01, 0.02, 0.88)),
+            GameOverOverlay,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("SIGNAL LOST"),
+                TextFont {
+                    font_size: 58.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(1.0, 0.15, 0.15)),
+            ));
+
+            parent.spawn((
+                Text::new("SYSTEM CRITICAL — CORE TERMINATED"),
+                TextFont {
+                    font_size: 18.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.7, 0.4, 0.4)),
+            ));
+
+            parent.spawn((
+                Text::new(format!(
+                    "Hostiles Eliminated: {}\nSimulation Time Terminated",
+                    stats.kills
+                )),
+                TextFont {
+                    font_size: 22.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.9, 0.85, 0.85)),
+            ));
+
+            parent.spawn((
+                Text::new("Press [ R ] to Reboot Core"),
+                TextFont {
+                    font_size: 26.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.3, 0.85, 1.0)),
+            ));
+        });
+}
+
+fn despawn_game_over_screen(mut commands: Commands, query: Query<Entity, With<GameOverOverlay>>) {
+    for entity in &query {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+/// Перезапуск игры по нажатию клавиши R на экране Game Over.
+#[allow(clippy::too_many_arguments)]
+fn handle_game_restart(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut stats: ResMut<WaveStats>,
+    enemy_assets: Res<EnemyAssets>,
+    player_assets: Res<PlayerAssets>,
+    mut player_q: Query<(
+        &mut Transform,
+        &mut Velocity,
+        &mut Player,
+        &mut Health,
+        &mut MeshMaterial3d<StandardMaterial>,
+    )>,
+    mut camera_q: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+    enemies_q: Query<Entity, With<Enemy>>,
+    projectiles_q: Query<Entity, With<Projectile>>,
+    particles_q: Query<Entity, With<Particle>>,
+) {
+    if !keys.just_pressed(KeyCode::KeyR) {
+        return;
+    }
+
+    // 1. Очистка старых врагов, снарядов и частиц
+    for e in &enemies_q {
+        commands.entity(e).despawn_recursive();
+    }
+    for e in &projectiles_q {
+        commands.entity(e).despawn();
+    }
+    for e in &particles_q {
+        commands.entity(e).despawn();
+    }
+
+    // 2. Сброс позиции, скорости, таймеров и здоровья игрока
+    if let Ok((mut tf, mut vel, mut player, mut health, mut mat)) = player_q.get_single_mut() {
+        tf.translation = PLAYER_START;
+        tf.rotation = Quat::IDENTITY;
+        vel.0 = Vec3::ZERO;
+        health.current = PLAYER_MAX_HEALTH;
+        player.dash_time_left = 0.0;
+        player.dash_cooldown_left = 0.0;
+        player.fire_cooldown_left = 0.0;
+        player.invuln_timer = 0.0;
+        mat.0 = player_assets.mat_normal.clone();
+    }
+
+    // 3. Сброс позиции камеры
+    if let Ok(mut cam_tf) = camera_q.get_single_mut() {
+        cam_tf.translation = PLAYER_START + CAMERA_OFFSET;
+    }
+
+    // 4. Сброс статистики убийств и спавна
+    stats.kills = 0;
+    stats.spawned_count = 0;
+
+    // 5. Спавн нового начального отряда врагов
+    spawn_squad(&mut commands, &enemy_assets, &mut stats);
+
+    // 6. Возврат в игровое состояние
+    next_state.set(AppState::InGame);
 }

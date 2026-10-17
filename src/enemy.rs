@@ -121,12 +121,8 @@ pub fn spawn_single_enemy(commands: &mut Commands, assets: &EnemyAssets, positio
         .id()
 }
 
-fn spawn_initial_enemies(
-    mut commands: Commands,
-    assets: Res<EnemyAssets>,
-    mut stats: ResMut<WaveStats>,
-) {
-    // Стартовая группа врагов в разных квадрантах арены
+/// Спавнит стартовый отряд врагов в ключевых секторах арены.
+pub fn spawn_squad(commands: &mut Commands, assets: &EnemyAssets, stats: &mut WaveStats) {
     let spawn_points = [
         Vec3::new(14.0, ENEMY_SIZE.y / 2.0, -18.0),
         Vec3::new(-16.0, ENEMY_SIZE.y / 2.0, 16.0),
@@ -137,9 +133,17 @@ fn spawn_initial_enemies(
     ];
 
     for pos in spawn_points {
-        spawn_single_enemy(&mut commands, &assets, pos);
+        spawn_single_enemy(commands, assets, pos);
         stats.spawned_count += 1;
     }
+}
+
+fn spawn_initial_enemies(
+    mut commands: Commands,
+    assets: Res<EnemyAssets>,
+    mut stats: ResMut<WaveStats>,
+) {
+    spawn_squad(&mut commands, &assets, &mut stats);
 }
 
 /// Простой ИИ: враги непрерывно поворачиваются к игроку и преследуют его.

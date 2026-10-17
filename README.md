@@ -42,6 +42,7 @@
 | `Space` | Dash in direction of movement (or facing direction if stationary) |
 | `Mouse` | Aiming (raycast to ground plane) |
 | `Left Mouse Button` | Fire projectile (hold for automatic fire) |
+| `R` | Restart simulation (after Game Over) |
 
 ---
 
