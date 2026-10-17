@@ -39,6 +39,7 @@ pub struct Player {
     pub dash_dir: Vec3,
     pub fire_cooldown_left: f32,
     pub invuln_timer: f32,
+    pub ghost_timer: f32,
 }
 
 #[derive(Resource)]
@@ -149,6 +150,7 @@ fn player_movement(
         player.dash_dir = dir;
         player.dash_time_left = DASH_DURATION;
         player.dash_cooldown_left = DASH_COOLDOWN;
+        player.ghost_timer = 0.0;
         material.0 = player_assets.mat_dash.clone();
 
         let seed = (time.elapsed_secs() * 1000.0) as u32;
@@ -157,8 +159,8 @@ fn player_movement(
             &vfx_assets,
             SparkKind::Dash,
             transform.translation,
-            14,
-            7.0,
+            6,
+            6.0,
             seed,
         );
     }
@@ -167,12 +169,17 @@ fn player_movement(
         player.dash_time_left -= dt;
         velocity.0 = player.dash_dir * DASH_SPEED;
 
-        spawn_dash_ghost(
-            &mut commands,
-            &vfx_assets,
-            player_assets.mesh.clone(),
-            transform,
-        );
+        // Спавним призрачные следы с разумным интервалом (3-4 на рывок вместо спавна каждый кадр)
+        player.ghost_timer += dt;
+        if player.ghost_timer >= 0.035 {
+            player.ghost_timer = 0.0;
+            spawn_dash_ghost(
+                &mut commands,
+                &vfx_assets,
+                player_assets.mesh.clone(),
+                transform,
+            );
+        }
 
         if player.dash_time_left <= 0.0 {
             // Возвращаем нормальный материал, если игрок не получил урон

@@ -64,6 +64,11 @@ fn resolve_player_collisions(
         let h = obs.half_extents;
         let p = transform.translation;
 
+        // Быстрое broad-phase отсечение по осям X и Z
+        if (p.x - c.x).abs() > h.x + PLAYER_RADIUS || (p.z - c.z).abs() > h.z + PLAYER_RADIUS {
+            continue;
+        }
+
         let closest = Vec2::new(
             p.x.clamp(c.x - h.x, c.x + h.x),
             p.z.clamp(c.z - h.z, c.z + h.z),

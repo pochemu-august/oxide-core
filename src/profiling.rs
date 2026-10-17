@@ -384,12 +384,21 @@ fn profile_frame(
     state.all_frame_durations_ms.push(dt_ms);
     state.interval_frame_durations_ms.push(dt_ms);
 
-    let entities = entities_q.iter().count();
-    let enemies = enemies_q.iter().count();
-    let projectiles = projectiles_q.iter().count();
-
-    // Проверка превышения бюджета кадра (10.0 мс = 100 FPS)
     let is_spike = dt_ms > 10.0;
+    let is_interval = state.interval_timer + time.delta_secs() >= 2.0;
+
+    // Считаем сущности только когда они действительно нужны (при спайке или для 2-сек среза),
+    // чтобы не тратить процессорное время на полный перебор таблиц ECS в каждом обычном кадре
+    let (entities, enemies, projectiles) = if is_spike || is_interval {
+        (
+            entities_q.iter().count(),
+            enemies_q.iter().count(),
+            projectiles_q.iter().count(),
+        )
+    } else {
+        (0, 0, 0)
+    };
+
     if is_spike {
         state.spikes_over_10ms += 1;
 

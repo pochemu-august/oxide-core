@@ -76,8 +76,22 @@ fn segment_intersects_aabb(
     box_half: Vec3,
     radius: f32,
 ) -> Option<Vec3> {
-    let min = box_center - box_half - Vec3::splat(radius);
-    let max = box_center + box_half + Vec3::splat(radius);
+    let r = Vec3::splat(radius);
+    let min = box_center - box_half - r;
+    let max = box_center + box_half + r;
+
+    // Быстрый отсев: если охватывающий объём отрезка не пересекается с AABB
+    let seg_min = p0.min(p1);
+    let seg_max = p0.max(p1);
+    if seg_min.x > max.x
+        || seg_max.x < min.x
+        || seg_min.y > max.y
+        || seg_max.y < min.y
+        || seg_min.z > max.z
+        || seg_max.z < min.z
+    {
+        return None;
+    }
 
     // Если начальная точка уже находится внутри AABB
     if p0.x >= min.x
@@ -184,7 +198,7 @@ fn player_shoot(
             &vfx_assets,
             SparkKind::Hit,
             hit,
-            6,
+            4,
             5.0,
             seed,
         );
@@ -257,7 +271,7 @@ fn update_projectiles(
                 &vfx_assets,
                 SparkKind::Hit,
                 hit_pos,
-                8,
+                4,
                 6.0,
                 seed,
             );
@@ -279,7 +293,7 @@ fn update_projectiles(
 
                 // Искры попадания
                 let seed = proj_entity.index().wrapping_mul(2_654_435_761);
-                spawn_sparks(&mut commands, &vfx_assets, SparkKind::Hit, p1, 6, 5.0, seed);
+                spawn_sparks(&mut commands, &vfx_assets, SparkKind::Hit, p1, 4, 5.0, seed);
 
                 // Нанесение урона
                 health.current -= PROJECTILE_DAMAGE;
@@ -289,7 +303,7 @@ fn update_projectiles(
 
                     // Эффект смерти: разлёт кубических осколков во все стороны
                     let death_seed = enemy_entity.index().wrapping_mul(3_141_592_653);
-                    spawn_death_chunks(&mut commands, &vfx_assets, e_pos, 16, death_seed);
+                    spawn_death_chunks(&mut commands, &vfx_assets, e_pos, 8, death_seed);
                 }
                 break;
             }

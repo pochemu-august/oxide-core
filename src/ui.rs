@@ -91,7 +91,8 @@ fn update_hud(
     // Обновляем видимый счётчик FPS в UI 4 раза в секунду (каждые 0.25 с),
     // чтобы цифры не мельтешили перед глазами игрока
     *display_timer += time.delta_secs();
-    if *display_timer >= 0.25 || *display_fps <= 0.0 {
+    let timer_tick = *display_timer >= 0.25 || *display_fps <= 0.0;
+    if timer_tick {
         *display_timer = 0.0;
         *display_fps = *smoothed_fps;
     }
@@ -104,11 +105,17 @@ fn update_hud(
     };
     let hostiles = enemies_q.iter().count();
 
-    // Используем только ASCII символы, чтобы не отображались квадраты (▯)
-    **text = format!(
-        "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {} | FPS: {:.0}",
-        hp, PLAYER_MAX_HEALTH, stats.kills, hostiles, *display_fps
-    );
+    // Обновляем текст только по таймеру либо при изменении геймплейного состояния (урон, враги, фраги).
+    // Это исключает ежекадровую инвалидацию шрифтового кэша и перестройку UI-меша
+    if timer_tick || stats.is_changed() || app_state.is_changed() {
+        let new_text = format!(
+            "oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nHP: {:.0}/{:.0} | Eliminated: {} | Hostiles: {} | FPS: {:.0}",
+            hp, PLAYER_MAX_HEALTH, stats.kills, hostiles, *display_fps
+        );
+        if **text != new_text {
+            **text = new_text;
+        }
+    }
 }
 
 /// Спавнит полноэкранный ретро-оверлей при гибели игрока (Game Over).
