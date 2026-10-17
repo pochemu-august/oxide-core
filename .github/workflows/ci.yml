@@ -15,16 +15,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest] # Проверяем и на Linux, и на Windows
+        os: [ubuntu-latest, windows-latest]
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install ALSA dependencies (Linux)
+    - name: Install System Dependencies (Linux)
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev pkg-config
+        sudo apt-get install -y libasound2-dev libudev-dev pkg-config
 
     - name: Install Rustup
       uses: dtolnay/rust-toolchain@stable
