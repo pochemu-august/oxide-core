@@ -44,7 +44,12 @@ impl Plugin for ProfilingPlugin {
             .add_systems(Startup, log_display_specs)
             .add_systems(
                 Update,
-                (check_late_monitors, profile_frame, handle_app_exit),
+                (
+                    check_late_monitors,
+                    profile_frame,
+                    exit_on_esc,
+                    handle_app_exit,
+                ),
             );
     }
 }
@@ -583,16 +588,15 @@ fn profile_frame(
     }
 }
 
-/// Перехватывает сигнал выхода из приложения (или нажатие Escape) для генерации итогового отчета.
-fn handle_app_exit(
-    mut app_exit: EventReader<AppExit>,
-    keys: Res<ButtonInput<KeyCode>>,
-    mut exit_writer: EventWriter<AppExit>,
-    profiler: Res<PerfProfiler>,
-) {
+/// Завершает приложение по нажатию Escape.
+fn exit_on_esc(keys: Res<ButtonInput<KeyCode>>, mut exit_writer: EventWriter<AppExit>) {
     if keys.just_pressed(KeyCode::Escape) {
         exit_writer.send(AppExit::Success);
     }
+}
+
+/// Перехватывает сигнал выхода из приложения для генерации итогового отчета.
+fn handle_app_exit(mut app_exit: EventReader<AppExit>, profiler: Res<PerfProfiler>) {
     if app_exit.read().next().is_some() {
         profiler.flush_final_summary();
     }
