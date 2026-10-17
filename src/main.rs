@@ -66,8 +66,6 @@ fn main() {
     App::new()
         .add_plugins(
             DefaultPlugins
-                .build()
-                .disable::<bevy::picking::PickingPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "oxide-core".into(),
