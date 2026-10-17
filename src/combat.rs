@@ -7,9 +7,9 @@
 
 use bevy::pbr::NotShadowCaster;
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 
 use crate::GameSet;
+use crate::aim::AimPoint;
 use crate::arena::Obstacle;
 use crate::config::{
     ENEMY_RADIUS, ENEMY_SIZE, FIRE_COOLDOWN, NOSE_TIP_LOCAL, PROJECTILE_DAMAGE,
@@ -144,7 +144,7 @@ fn segment_intersects_aabb(
 #[allow(clippy::too_many_arguments)]
 fn player_shoot(
     mut commands: Commands,
-    windows: Query<&Window, With<PrimaryWindow>>,
+    aim: Res<AimPoint>,
     mouse: Res<ButtonInput<MouseButton>>,
     time: Res<Time>,
     combat_assets: Res<CombatAssets>,
@@ -158,10 +158,7 @@ fn player_shoot(
     player.fire_cooldown_left = (player.fire_cooldown_left - time.delta_secs()).max(0.0);
 
     // 1. Блокируем стрельбу при выходе курсора мыши за пределы игрового окна
-    let Ok(window) = windows.get_single() else {
-        return;
-    };
-    if window.cursor_position().is_none() {
+    if aim.0.is_none() {
         return;
     }
 
