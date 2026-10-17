@@ -28,6 +28,7 @@ pub mod config;
 pub mod enemy;
 pub mod physics;
 pub mod player;
+pub mod profiling;
 pub mod ui;
 pub mod vfx;
 
@@ -106,6 +107,7 @@ fn main() {
             combat::CombatPlugin,
             enemy::EnemyPlugin,
             ui::UiPlugin,
+            profiling::ProfilingPlugin,
         ))
         .run();
 }
