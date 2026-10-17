@@ -496,7 +496,7 @@ fn setup_player_and_camera(
 
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
-        Text::new("oxide-core\nWASD — move | SPACE — dash | LMB — shoot"),
+        Text::new("oxide-core\nWASD: move | SPACE: dash | LMB: shoot"),
         TextFont {
             font_size: 16.0,
             ..default()
