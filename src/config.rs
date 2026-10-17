@@ -92,3 +92,17 @@ pub const COLOR_RED: Color = Color::srgb(0.75, 0.12, 0.10);
 pub const COLOR_ORANGE: Color = Color::srgb(0.95, 0.45, 0.08);
 pub const COLOR_PLAYER: Color = Color::srgb(0.15, 0.35, 0.95);
 pub const COLOR_SKY: Color = Color::srgb(0.04, 0.04, 0.06);
+
+// ============================================================================
+// ВРАГИ И ЗДОРОВЬЕ
+// ============================================================================
+
+pub const ENEMY_SIZE: Vec3 = Vec3::new(1.0, 1.4, 1.0);
+pub const ENEMY_RADIUS: f32 = 0.55;
+pub const ENEMY_SPEED: f32 = 6.5;
+pub const ENEMY_HEALTH: f32 = 30.0;
+pub const PROJECTILE_DAMAGE: f32 = 15.0;
+pub const COLOR_ENEMY: Color = Color::srgb(0.92, 0.12, 0.14);
+pub const COLOR_ENEMY_EYE: Color = Color::srgb(1.0, 0.85, 0.1);
+pub const MAX_ENEMIES: usize = 12;
+pub const ENEMY_SPAWN_INTERVAL: f32 = 2.5;

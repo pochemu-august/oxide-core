@@ -30,6 +30,8 @@ pub struct VfxAssets {
     pub spark_mat: Handle<StandardMaterial>,
     pub dash_spark_mat: Handle<StandardMaterial>,
     pub ghost_mat: Handle<StandardMaterial>,
+    pub chunk_mesh: Handle<Mesh>,
+    pub chunk_mat: Handle<StandardMaterial>,
 }
 
 /// Тип искр при спавне.
@@ -73,6 +75,12 @@ fn setup_vfx_assets(
             emissive: LinearRgba::rgb(0.5, 2.0, 5.0),
             alpha_mode: AlphaMode::Blend,
             unlit: true,
+            ..default()
+        }),
+        chunk_mesh: meshes.add(Cuboid::from_length(0.24)),
+        chunk_mat: materials.add(StandardMaterial {
+            base_color: Color::srgb(0.95, 0.15, 0.15),
+            emissive: LinearRgba::rgb(8.0, 1.2, 0.8),
             ..default()
         }),
     };
@@ -150,6 +158,38 @@ pub fn spawn_dash_ghost(
         },
         NotShadowCaster,
     ));
+}
+
+/// Спавнит разлёт кубических осколков при гибели врага.
+pub fn spawn_death_chunks(
+    commands: &mut Commands,
+    vfx: &VfxAssets,
+    origin: Vec3,
+    count: u32,
+    rng_seed: u32,
+) {
+    for i in 0..count {
+        let s = rng_seed.wrapping_add(i.wrapping_mul(127));
+        let angle = (i as f32 / count as f32) * TAU + hash01(s) * 0.7;
+        let up = 4.0 + hash01(s ^ 0xBEEF) * 5.0;
+        let spd = 6.0 + hash01(s ^ 0xCAFE) * 7.0;
+        let velocity = Vec3::new(angle.cos() * spd, up, angle.sin() * spd);
+        let scale = 0.8 + hash01(s ^ 0x55AA) * 0.6;
+
+        commands.spawn((
+            Mesh3d(vfx.chunk_mesh.clone()),
+            MeshMaterial3d(vfx.chunk_mat.clone()),
+            Transform::from_translation(origin).with_scale(Vec3::splat(scale)),
+            Particle {
+                velocity,
+                gravity: 24.0,
+                lifetime_left: 0.7,
+                max_lifetime: 0.7,
+                start_scale: scale,
+            },
+            NotShadowCaster,
+        ));
+    }
 }
 
 fn update_particles(

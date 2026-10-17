@@ -80,9 +80,10 @@ cargo run
 | **Player** | [`src/player.rs`](src/player.rs) | Логика игрока: WASD-управление, рывок (Dash) и круг готовности под ногами. | `PlayerPlugin`, `Player`, `PlayerAssets` |
 | **Camera** | [`src/camera.rs`](src/camera.rs) | Спавн камеры (HDR + Bloom + Tonemapping) и независимое от FPS сглаженное следование. | `CameraPlugin`, `MainCamera` |
 | **Aim** | [`src/aim.rs`](src/aim.rs) | Прицеливание: рейкаст курсора в 3D-мир, поворот игрока по оси Y, лазер и перекрестие. | `AimPlugin`, `AimPoint` |
-| **Combat** | [`src/combat.rs`](src/combat.rs) | Стрельба: спавн снарядов, их полет, деспавн по таймеру и попадание в стены. | `CombatPlugin`, `Projectile`, `CombatAssets` |
-| **VFX** | [`src/vfx.rs`](src/vfx.rs) | Система процедурных частиц: искры, след рывка и детерминированный хэш случайности. | `VfxPlugin`, `VfxAssets`, `spawn_sparks`, `hash01` |
-| **UI** | [`src/ui.rs`](src/ui.rs) | Текстовая подсказка управления в левом верхнем углу экрана. | `UiPlugin` |
+| **Combat** | [`src/combat.rs`](src/combat.rs) | Стрельба: спавн снарядов, их полет, деспавн по таймеру и попадания по врагам/стенам. | `CombatPlugin`, `Projectile`, `CombatAssets` |
+| **Enemy** | [`src/enemy.rs`](src/enemy.rs) | Враги с ИИ преследования игрока, компонент `Health`, периодический спавнер и счетчик волны. | `EnemyPlugin`, `Enemy`, `Health`, `WaveStats` |
+| **VFX** | [`src/vfx.rs`](src/vfx.rs) | Система процедурных частиц: искры, след рывка и разлёт воксельных осколков врага. | `VfxPlugin`, `VfxAssets`, `spawn_sparks`, `spawn_death_chunks` |
+| **UI** | [`src/ui.rs`](src/ui.rs) | Текстовая подсказка управления и динамический счётчик уничтоженных/активных врагов. | `UiPlugin` |
 
 ---
 

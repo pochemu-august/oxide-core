@@ -80,9 +80,10 @@ The project follows a clean, modular ECS plugin architecture. Every core subsyst
 | **Player** | [`src/player.rs`](src/player.rs) | Player spawning, WASD input handling, dash logic, and cooldown ring gizmo. | `PlayerPlugin`, `Player`, `PlayerAssets` |
 | **Camera** | [`src/camera.rs`](src/camera.rs) | Camera entity spawn (HDR + Bloom + Tonemapping) and smooth player follow. | `CameraPlugin`, `MainCamera` |
 | **Aim** | [`src/aim.rs`](src/aim.rs) | Raycasting cursor onto horizontal plane, player Y-rotation, laser and crosshair gizmos. | `AimPlugin`, `AimPoint` |
-| **Combat** | [`src/combat.rs`](src/combat.rs) | Projectile spawning, movement, lifetime expiration, and obstacle impact handling. | `CombatPlugin`, `Projectile`, `CombatAssets` |
-| **VFX** | [`src/vfx.rs`](src/vfx.rs) | Procedural particle simulation (sparks, dash ghosts) with fast deterministic pseudo-random hashing. | `VfxPlugin`, `VfxAssets`, `spawn_sparks`, `hash01` |
-| **UI** | [`src/ui.rs`](src/ui.rs) | Top-left HUD controls reminder text. | `UiPlugin` |
+| **Combat** | [`src/combat.rs`](src/combat.rs) | Projectile spawning, movement, lifetime expiration, and bullet hits on enemies/walls. | `CombatPlugin`, `Projectile`, `CombatAssets` |
+| **Enemy** | [`src/enemy.rs`](src/enemy.rs) | Hostile AI following player, Health component, periodic spawner, and wave stats. | `EnemyPlugin`, `Enemy`, `Health`, `WaveStats` |
+| **VFX** | [`src/vfx.rs`](src/vfx.rs) | Procedural particles: sparks, dash ghosts, and enemy death voxel chunk explosions. | `VfxPlugin`, `VfxAssets`, `spawn_sparks`, `spawn_death_chunks` |
+| **UI** | [`src/ui.rs`](src/ui.rs) | Top-left HUD controls reminder and real-time kill & active hostile counter. | `UiPlugin` |
 
 ---
 

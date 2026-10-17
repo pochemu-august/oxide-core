@@ -15,7 +15,9 @@
     // Намеренные касты в расчётах времени и хэшах частиц.
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
+    clippy::cast_sign_loss,
+    // Сложные типы в Bevy Query<(...), (...)> идиоматичны для ECS
+    clippy::type_complexity
 )]
 
 pub mod aim;
@@ -23,6 +25,7 @@ pub mod arena;
 pub mod camera;
 pub mod combat;
 pub mod config;
+pub mod enemy;
 pub mod physics;
 pub mod player;
 pub mod ui;
@@ -80,6 +83,7 @@ fn main() {
             camera::CameraPlugin,
             aim::AimPlugin,
             combat::CombatPlugin,
+            enemy::EnemyPlugin,
             ui::UiPlugin,
         ))
         .run();
