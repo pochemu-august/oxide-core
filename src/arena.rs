@@ -220,13 +220,19 @@ fn setup_arena(
         ));
     }
 
-    // Направленный источник света с тенями
+    // Направленный источник света с тенями (1 каскад вместо 4 для максимальной производительности в top-down)
     commands.spawn((
         DirectionalLight {
             illuminance: 6000.0,
             shadows_enabled: true,
             ..default()
         },
+        bevy::pbr::CascadeShadowConfigBuilder {
+            num_cascades: 1,
+            maximum_distance: 80.0,
+            ..default()
+        }
+        .build(),
         Transform::from_xyz(20.0, 40.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 }

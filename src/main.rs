@@ -81,6 +81,10 @@ fn main() {
                 }),
         )
         .add_plugins(FrameTimeDiagnosticsPlugin)
+        .insert_resource(bevy::picking::mesh_picking::MeshPickingSettings {
+            require_markers: true,
+            ..default()
+        })
         .init_state::<AppState>()
         // Задаём строгий порядок фаз каждого кадра во время активного боя
         .configure_sets(
