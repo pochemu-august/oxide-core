@@ -21,7 +21,9 @@ struct HudText;
 
 fn setup_ui(mut commands: Commands) {
     commands.spawn((
-        Text::new("oxide-core\nWASD: move | SPACE: dash | LMB: shoot\nEliminated: {} | Hostiles: {}"),
+        Text::new(
+            "oxide-core\nWASD — move | SPACE — dash | LMB — shoot\nEliminated: 0 | Hostiles: 6",
+        ),
         TextFont {
             font_size: 16.0,
             ..default()
