@@ -66,6 +66,12 @@ fn main() {
     App::new()
         .add_plugins(
             DefaultPlugins
+                .build()
+                .disable::<bevy::picking::input::PointerInputPlugin>()
+                .disable::<bevy::picking::PickingPlugin>()
+                .disable::<bevy::picking::InteractionPlugin>()
+                .disable::<bevy::ui::picking_backend::UiPickingPlugin>()
+                .disable::<bevy::picking::mesh_picking::MeshPickingPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "oxide-core".into(),
@@ -81,10 +87,6 @@ fn main() {
                 }),
         )
         .add_plugins(FrameTimeDiagnosticsPlugin)
-        .insert_resource(bevy::picking::mesh_picking::MeshPickingSettings {
-            require_markers: true,
-            ..default()
-        })
         .init_state::<AppState>()
         // Задаём строгий порядок фаз каждого кадра во время активного боя
         .configure_sets(

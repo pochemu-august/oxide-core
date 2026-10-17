@@ -9,6 +9,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss,
     clippy::too_many_arguments,
+    clippy::too_many_lines,
     clippy::doc_markdown,
     clippy::format_push_string,
     clippy::similar_names,
@@ -25,8 +26,9 @@ use std::thread;
 
 use bevy::app::AppExit;
 use bevy::diagnostic::EntityCountDiagnosticsPlugin;
+use bevy::input::mouse::MouseMotion;
 use bevy::prelude::*;
-use bevy::window::{Monitor, PrimaryWindow};
+use bevy::window::{CursorMoved, Monitor, PrimaryWindow};
 
 use crate::combat::Projectile;
 use crate::enemy::Enemy;
@@ -68,7 +70,13 @@ struct ProfilerState {
     total_frames: u64,
     spikes_over_10ms: u64,
     all_frame_durations_ms: Vec<f64>,
+    all_mouse_moving_durations: Vec<f64>,
+    all_mouse_still_durations: Vec<f64>,
+    all_mouse_events: u64,
     interval_frame_durations_ms: Vec<f64>,
+    interval_mouse_moving_durations: Vec<f64>,
+    interval_mouse_still_durations: Vec<f64>,
+    interval_mouse_events: u64,
     top_10_spikes: Vec<FrameSpike>,
     interval_timer: f32,
 }
@@ -77,7 +85,8 @@ struct ProfilerState {
 #[derive(Resource)]
 pub struct PerfProfiler {
     state: Arc<Mutex<ProfilerState>>,
-    log_sender: Sender<LogMessage>,
+    log_sender: Option<Sender<LogMessage>>,
+    logger_handle: Option<thread::JoinHandle<()>>,
     final_summary_written: Arc<AtomicBool>,
 }
 
@@ -88,7 +97,7 @@ impl PerfProfiler {
         let (tx, rx) = channel::<LogMessage>();
 
         // Фоновый рабочий поток с буферизованной записью на диск
-        thread::Builder::new()
+        let logger_handle = thread::Builder::new()
             .name("perf_logger".into())
             .spawn(move || {
                 let file = match OpenOptions::new()
@@ -121,21 +130,30 @@ impl PerfProfiler {
             total_frames: 0,
             spikes_over_10ms: 0,
             all_frame_durations_ms: Vec::with_capacity(36_000),
+            all_mouse_moving_durations: Vec::with_capacity(18_000),
+            all_mouse_still_durations: Vec::with_capacity(18_000),
+            all_mouse_events: 0,
             interval_frame_durations_ms: Vec::with_capacity(300),
+            interval_mouse_moving_durations: Vec::with_capacity(300),
+            interval_mouse_still_durations: Vec::with_capacity(300),
+            interval_mouse_events: 0,
             top_10_spikes: Vec::with_capacity(10),
             interval_timer: 0.0,
         }));
 
         Self {
             state,
-            log_sender: tx,
+            log_sender: Some(tx),
+            logger_handle: Some(logger_handle),
             final_summary_written: Arc::new(AtomicBool::new(false)),
         }
     }
 
     /// Отправляет форматированную строку в фоновый поток для неблокирующей записи.
     pub fn log_text(&self, text: String) {
-        let _ = self.log_sender.send(LogMessage::Write(text));
+        if let Some(ref sender) = self.log_sender {
+            let _ = sender.send(LogMessage::Write(text));
+        }
     }
 
     /// Формирует итоговый аналитический отчёт при завершении сессии.
@@ -194,6 +212,56 @@ impl PerfProfiler {
             report,
             "  Кадры > 10.0 мс (< 100 FPS)     : {spikes_over_10ms} ({spike_pct:.2}% от всех кадров)"
         );
+
+        // Анализ влияния движения мыши на всю сессию
+        let moving_frames = state.all_mouse_moving_durations.len();
+        let still_frames = state.all_mouse_still_durations.len();
+
+        report.push_str(
+            "-------------------------------------------------------------------------------\n",
+        );
+        report.push_str("  АНАЛИЗ ВЛИЯНИЯ ДВИЖЕНИЯ МЫШИ (Mouse Motion vs Idle):\n");
+        report.push_str("  Режим            Кадры     Ср. FPS   1% Low   Спайки >10мс\n");
+
+        if moving_frames > 0 {
+            let moving_sum: f64 = state.all_mouse_moving_durations.iter().sum();
+            let moving_avg_fps = 1000.0 / (moving_sum / moving_frames as f64);
+            let (moving_1pct, _) = calculate_lows(&state.all_mouse_moving_durations);
+            let moving_spikes = state
+                .all_mouse_moving_durations
+                .iter()
+                .filter(|&&d| d > 10.0)
+                .count();
+            let moving_spikes_pct = (moving_spikes as f64) / (moving_frames as f64) * 100.0;
+            let _ = writeln!(
+                report,
+                "  Мышь двигалась  : {moving_frames:5}     {moving_avg_fps:5.1}     {moving_1pct:5.1}    {moving_spikes:5} ({moving_spikes_pct:.1}%)"
+            );
+        } else {
+            report.push_str("  Мышь двигалась  :     0       N/A       N/A        0 (N/A)\n");
+        }
+
+        if still_frames > 0 {
+            let still_sum: f64 = state.all_mouse_still_durations.iter().sum();
+            let still_avg_fps = 1000.0 / (still_sum / still_frames as f64);
+            let (still_1pct, _) = calculate_lows(&state.all_mouse_still_durations);
+            let still_spikes = state
+                .all_mouse_still_durations
+                .iter()
+                .filter(|&&d| d > 10.0)
+                .count();
+            let still_spikes_pct = (still_spikes as f64) / (still_frames as f64) * 100.0;
+            let _ = writeln!(
+                report,
+                "  Мышь неподвижна : {still_frames:5}     {still_avg_fps:5.1}     {still_1pct:5.1}    {still_spikes:5} ({still_spikes_pct:.1}%)"
+            );
+        } else {
+            report.push_str("  Мышь неподвижна :     0       N/A       N/A        0 (N/A)\n");
+        }
+
+        let total_events = state.all_mouse_events;
+        let _ = writeln!(report, "  Всего событий мыши за сессию    : {total_events}");
+
         report.push_str(
             "-------------------------------------------------------------------------------\n",
         );
@@ -236,6 +304,10 @@ impl Default for PerfProfiler {
 impl Drop for PerfProfiler {
     fn drop(&mut self) {
         self.flush_final_summary();
+        drop(self.log_sender.take());
+        if let Some(handle) = self.logger_handle.take() {
+            let _ = handle.join();
+        }
     }
 }
 
@@ -246,7 +318,7 @@ fn calculate_lows(durations_ms: &[f64]) -> (f64, f64) {
     }
     let mut sorted = durations_ms.to_vec();
     // Сортировка от самых долгих кадров к самым быстрым
-    sorted.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+    sorted.sort_by(|a, b| b.total_cmp(a));
 
     // 1% Low: среднее время кадра в верхнем 1% самых долгих
     let count_1pct = ((sorted.len() as f64) * 0.01).ceil() as usize;
@@ -365,8 +437,10 @@ fn try_log_monitors(
 
 /// Фиксирует метрики каждого кадра и периодически пишет срез в файл.
 fn profile_frame(
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     profiler: Res<PerfProfiler>,
+    mut cursor_moved: EventReader<CursorMoved>,
+    mut mouse_motion: EventReader<MouseMotion>,
     entities_q: Query<Entity>,
     enemies_q: Query<&Enemy>,
     projectiles_q: Query<&Projectile>,
@@ -376,6 +450,8 @@ fn profile_frame(
         return;
     }
 
+    let mouse_events = (cursor_moved.read().count() + mouse_motion.read().count()) as u64;
+
     let Ok(mut state) = profiler.state.lock() else {
         return;
     };
@@ -384,16 +460,28 @@ fn profile_frame(
     state.all_frame_durations_ms.push(dt_ms);
     state.interval_frame_durations_ms.push(dt_ms);
 
+    state.all_mouse_events += mouse_events;
+    state.interval_mouse_events += mouse_events;
+
+    if mouse_events > 0 {
+        state.all_mouse_moving_durations.push(dt_ms);
+        state.interval_mouse_moving_durations.push(dt_ms);
+    } else {
+        state.all_mouse_still_durations.push(dt_ms);
+        state.interval_mouse_still_durations.push(dt_ms);
+    }
+
     let is_spike = dt_ms > 10.0;
     let is_interval = state.interval_timer + time.delta_secs() >= 2.0;
 
     // Считаем сущности только когда они действительно нужны (при спайке или для 2-сек среза),
-    // чтобы не тратить процессорное время на полный перебор таблиц ECS в каждом обычном кадре
+    // чтобы не тратить процессорное время на полный перебор таблиц ECS в каждом обычном кадре.
+    // Для Enemy и Projectile используем O(1) ExactSizeIterator::len().
     let (entities, enemies, projectiles) = if is_spike || is_interval {
         (
             entities_q.iter().count(),
-            enemies_q.iter().count(),
-            projectiles_q.iter().count(),
+            enemies_q.iter().len(),
+            projectiles_q.iter().len(),
         )
     } else {
         (0, 0, 0)
@@ -415,7 +503,7 @@ fn profile_frame(
             state.top_10_spikes.push(spike);
             state
                 .top_10_spikes
-                .sort_by(|a, b| b.duration_ms.partial_cmp(&a.duration_ms).unwrap());
+                .sort_by(|a, b| b.duration_ms.total_cmp(&a.duration_ms));
         } else if state
             .top_10_spikes
             .last()
@@ -425,7 +513,7 @@ fn profile_frame(
             state.top_10_spikes.push(spike);
             state
                 .top_10_spikes
-                .sort_by(|a, b| b.duration_ms.partial_cmp(&a.duration_ms).unwrap());
+                .sort_by(|a, b| b.duration_ms.total_cmp(&a.duration_ms));
         }
     }
 
@@ -450,11 +538,44 @@ fn profile_frame(
                 .filter(|&&d| d > 10.0)
                 .count();
 
+            // Расчёт FPS для режимов «мышь двигалась» / «мышь стояла» за интервал
+            let moving_count = state.interval_mouse_moving_durations.len();
+            let moving_fps = if moving_count > 0 {
+                let moving_sum: f64 = state.interval_mouse_moving_durations.iter().sum();
+                1000.0 / (moving_sum / moving_count as f64)
+            } else {
+                0.0
+            };
+
+            let still_count = state.interval_mouse_still_durations.len();
+            let still_fps = if still_count > 0 {
+                let still_sum: f64 = state.interval_mouse_still_durations.iter().sum();
+                1000.0 / (still_sum / still_count as f64)
+            } else {
+                0.0
+            };
+
+            let interval_events = state.interval_mouse_events;
+
             state.interval_frame_durations_ms.clear();
+            state.interval_mouse_moving_durations.clear();
+            state.interval_mouse_still_durations.clear();
+            state.interval_mouse_events = 0;
 
             let elapsed_sec = time.elapsed_secs();
+
+            let mouse_str = if interval_events == 0 {
+                format!("Мышь: 0 соб. (покой: {still_fps:5.1} FPS)")
+            } else if still_count == 0 {
+                format!("Мышь: {interval_events:4} соб. (движ: {moving_fps:5.1} FPS)")
+            } else {
+                format!(
+                    "Мышь: {interval_events:4} соб. (движ: {moving_fps:5.1} | покой: {still_fps:5.1} FPS)"
+                )
+            };
+
             let log_line = format!(
-                "[{elapsed_sec:6.1}с] FPS: {avg_fps:5.1} | 1% Low: {fps_1pct:5.1} | Спайки (>10мс): {interval_spikes:2}/{interval_count} кадров | Сущности: {entities} (Враги: {enemies}, Пули: {projectiles})\n"
+                "[{elapsed_sec:6.1}с] FPS: {avg_fps:5.1} | 1% Low: {fps_1pct:5.1} | Спайки (>10мс): {interval_spikes:2}/{interval_count} кадров | {mouse_str} | Сущности: {entities} (Враги: {enemies}, Пули: {projectiles})\n"
             );
 
             profiler.log_text(log_line);
@@ -462,8 +583,16 @@ fn profile_frame(
     }
 }
 
-/// Перехватывает сигнал выхода из приложения для генерации итогового отчета.
-fn handle_app_exit(mut app_exit: EventReader<AppExit>, profiler: Res<PerfProfiler>) {
+/// Перехватывает сигнал выхода из приложения (или нажатие Escape) для генерации итогового отчета.
+fn handle_app_exit(
+    mut app_exit: EventReader<AppExit>,
+    keys: Res<ButtonInput<KeyCode>>,
+    mut exit_writer: EventWriter<AppExit>,
+    profiler: Res<PerfProfiler>,
+) {
+    if keys.just_pressed(KeyCode::Escape) {
+        exit_writer.send(AppExit::Success);
+    }
     if app_exit.read().next().is_some() {
         profiler.flush_final_summary();
     }
